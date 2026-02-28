@@ -21,7 +21,7 @@ logger = logging.getLogger("WanderFM.Server")
 app = FastAPI(title="WanderFM API")
 state = MusicState()
 music_thread: Optional[threading.Thread] = None
-api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+lyria_api_key = os.getenv("LYRIA_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 class UpdateRequest(BaseModel):
     bpm: Optional[int] = None
@@ -45,7 +45,7 @@ async def start_music():
     if state.running:
         return {"message": "Already running"}
     
-    if not api_key:
+    if not lyria_api_key:
         raise HTTPException(status_code=500, detail="API Key missing")
     
     # Ensure prompts are set if not already
@@ -54,7 +54,7 @@ async def start_music():
     
     state.running = True
     state.error = None
-    music_thread = threading.Thread(target=run_music_thread, args=(api_key, state))
+    music_thread = threading.Thread(target=run_music_thread, args=(lyria_api_key, state))
     music_thread.daemon = True
     music_thread.start()
     return {"message": "Music started"}

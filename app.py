@@ -26,10 +26,10 @@ def main():
     # Initialize state
     state = MusicState()
     
-    # API Key (Google AI Studio - free at aistudio.google.com/apikey)
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ Error: API key not found. Please set GOOGLE_API_KEY in your .env file.")
+    # Lyria API Key (Google AI Studio - free at aistudio.google.com/apikey)
+    lyria_api_key = os.getenv("LYRIA_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not lyria_api_key:
+        print("❌ Error: Lyria API key not found. Please set LYRIA_API_KEY in your .env file.")
         return
 
     # Location for weather
@@ -65,7 +65,7 @@ def main():
     # Start music thread
     print("\n🎹 Starting music generation...")
     state.running = True
-    music_thread = threading.Thread(target=run_music_thread, args=(api_key, state))
+    music_thread = threading.Thread(target=run_music_thread, args=(lyria_api_key, state))
     music_thread.daemon = True
     music_thread.start()
 
