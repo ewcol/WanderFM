@@ -77,6 +77,29 @@ h1, .subtitle {
     to { transform: translate(100px, 100px) scale(1.1); }
 }
 
+.pulse-circle {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(129, 140, 248, 0.4) 0%, rgba(192, 132, 252, 0.1) 50%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1; 
+    animation: heartbeat var(--pulse-duration, 0.66s) ease-in-out infinite;
+    pointer-events: none;
+    filter: blur(40px);
+}
+
+@keyframes heartbeat {
+    0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.2; }
+    15% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+    30% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.4; }
+    45% { transform: translate(-50%, -50%) scale(1.4); opacity: 0.9; }
+    100% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.2; }
+}
+
 .container {
     width: 100%;
     max-width: 480px;
@@ -183,33 +206,6 @@ input[type="text"]:focus {
     flex-shrink: 0;
 }
 
-.metrics {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.metric {
-    background: rgba(0,0,0,0.2);
-    padding: 1rem;
-    border-radius: 16px;
-    text-align: center;
-}
-
-.metric .label {
-    display: block;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 0.25rem;
-}
-
-.metric .value {
-    font-size: 1.5rem;
-    font-weight: 600;
-    font-family: 'Outfit', sans-serif;
-}
 
 input[type="range"] {
     width: 100%;
@@ -370,4 +366,35 @@ footer p {
     font-size: 0.75rem;
     color: var(--text-muted);
     text-align: center;
+}
+
+.mini-metrics {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 100;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.mini-metrics .label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.mini-metrics .value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary);
+    font-family: 'Outfit', sans-serif;
 }
