@@ -44,7 +44,7 @@ async def start_music():
     
     # Ensure prompts are set if not already
     if not state.prompts:
-        state.prompts = get_time_of_day_prompts()
+        state.prompts = build_combined_prompts(None, state.bpm)
     
     state.running = True
     state.error = None
@@ -71,7 +71,7 @@ async def update_state(req: UpdateRequest):
         if coords:
             try:
                 weather_data = get_weather(coords[0], coords[1])
-                state.prompts = build_combined_prompts(weather_data)
+                state.prompts = build_combined_prompts(weather_data, state.bpm)
                 state.current_city = req.city
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
