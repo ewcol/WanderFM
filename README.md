@@ -4,7 +4,7 @@ Real-time AI music generation powered by **Google Lyria RealTime**, driven by yo
 
 ## Features
 
-- **❤️ Heartbeat (BPM)** – Slider to simulate heart rate (60–180 BPM). Maps directly to music tempo.
+- **❤️ Heartbeat (BPM)** – Simulate heart rate (60–180 BPM). Maps directly to music tempo.
 - **🕐 Time of day** – Morning, afternoon, evening, and night shape the mood (e.g. calm morning vs late-night ambient).
 - **🌤️ Weather** – Open-Meteo (free, no API key) influences style: sunny, rainy, cloudy, stormy, etc.
 
@@ -30,20 +30,26 @@ Create `.env`:
 GOOGLE_API_KEY=your_key_here
 ```
 
-Or enter it in the app when prompted.
-
 ### 3. Run
 
+You can choose between the CLI or the Web Interface:
+
+**Web Interface (Premium):**
 ```bash
-streamlit run app.py
+python server.py
+```
+Then open `http://localhost:8000` in your browser.
+
+**CLI Version:**
+```bash
+python app.py
 ```
 
-### 4. Use
+### 4. Use (Web Interface)
 
-1. Enter your city for weather.
-2. Adjust the heartbeat slider (BPM).
-3. Click **Play** to start real-time music.
-4. Move the slider while playing to change tempo.
+1. Adjust the **BPM slider** to change the tempo in real-time.
+2. Enter a **City** to update the mood based on local weather.
+3. Click **Play** to start the music generation.
 
 ## Project structure
 
@@ -61,7 +67,6 @@ src/
 
 - **Lyria RealTime** – Google’s real-time music model via `google-genai`
 - **Open-Meteo** – Free weather API (no key)
-- **Streamlit** – Web UI
 - **sounddevice** – Audio playback
 
 ## Hackathon build (4h)

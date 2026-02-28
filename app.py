@@ -1,126 +1,127 @@
 """
-WanderFM - Real-time music generation powered by Lyria
+WanderFM - Real-time music generation powered by Lyria (CLI Version)
 Heartbeat (BPM) + Time of Day + Weather → Music
 """
 
 import os
+import time
 import threading
-import streamlit as st
+from datetime import datetime
 from dotenv import load_dotenv
 
 from src.state import MusicState
 from src.runner import run_music_thread
 from src.weather import geocode_city, get_weather
-from src.prompts import build_combined_prompts
+from src.prompts import build_combined_prompts, get_time_of_day_prompts
 
-load_dotenv()
+def main():
+    load_dotenv()
+    
+    print("\n" + "="*30)
+    print("      🎵 WanderFM (CLI)")
+    print("="*30)
+    print("Real-time music powered by Lyria")
+    print("Heartbeat • Time • Weather\n")
 
-st.set_page_config(
-    page_title="WanderFM",
-    page_icon="🎵",
-    layout="centered",
-)
+    # Initialize state
+    state = MusicState()
+    
+    # API Key (Google AI Studio - free at aistudio.google.com/apikey)
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("❌ Error: API key not found. Please set GOOGLE_API_KEY in your .env file.")
+        return
 
-st.title("🎵 WanderFM")
-st.caption("Real-time music powered by Lyria • Heartbeat • Time • Weather")
-
-# Initialize session state
-if "music_state" not in st.session_state:
-    st.session_state.music_state = MusicState()
-if "music_thread" not in st.session_state:
-    st.session_state.music_thread = None
-
-state = st.session_state.music_state
-
-# API Key (Google AI Studio - free at aistudio.google.com/apikey)
-api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-
-# Location for weather
-city = st.text_input("City for weather", value="New York", placeholder="e.g. London, Tokyo")
-
-# Fetch weather
-weather_data = None
-if city:
+    # Location for weather
+    city = input("Enter city for weather (default: New York): ").strip() or "New York"
+    
+    # Fetch weather
+    print(f"🔍 Fetching weather for {city}...")
     coords = geocode_city(city)
+    weather_data = None
     if coords:
         try:
             weather_data = get_weather(coords[0], coords[1])
+            print(f"✅ Weather: {weather_data.temperature:.0f}°C, {weather_data.description}")
         except Exception as e:
-            st.warning(f"Could not fetch weather: {e}")
+            print(f"⚠️ Could not fetch weather: {e}")
     else:
-        st.warning("City not found. Using default prompts.")
+        print("⚠️ City not found. Using default prompts.")
 
-# Build prompts from time + weather
-if weather_data:
-    state.prompts = build_combined_prompts(weather_data)
-else:
-    from src.prompts import get_time_of_day_prompts
-    state.prompts = get_time_of_day_prompts()
-
-# UI
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("❤️ Heartbeat (BPM)")
-    st.caption("Simulate your heart rate. 60–180 BPM maps to music tempo.")
-    heartbeat = st.slider(
-        "BPM",
-        min_value=60,
-        max_value=180,
-        value=state.bpm,
-        step=5,
-        key="heartbeat_ui",
-    )
-    state.bpm = heartbeat
-
-with col2:
-    from datetime import datetime
-    now = datetime.now()
-    st.metric("Time", now.strftime("%H:%M"))
-    st.caption(now.strftime("%A, %B %d"))
+    # Build prompts from time + weather
     if weather_data:
-        st.metric("Weather", f"{weather_data.temperature:.0f}°C")
-        st.caption(weather_data.description)
+        state.prompts = build_combined_prompts(weather_data)
+    else:
+        state.prompts = get_time_of_day_prompts()
+    
+    now = datetime.now()
+    print(f"🕒 Local Time: {now.strftime('%H:%M')} ({now.strftime('%A, %B %d')})")
+    
+    # Initial BPM
+    try:
+        bpm_input = input("Enter starting BPM (60-180, default: 90): ").strip()
+        state.bpm = int(bpm_input) if bpm_input else 90
+    except ValueError:
+        state.bpm = 90
+        print("⚠️ Invalid BPM. Using default: 90")
 
-st.divider()
+    # Start music thread
+    print("\n🎹 Starting music generation...")
+    state.running = True
+    music_thread = threading.Thread(target=run_music_thread, args=(api_key, state))
+    music_thread.daemon = True
+    music_thread.start()
 
-# Display active prompts
-st.subheader("🎵 Music prompts")
-prompt_text = " • ".join([f"{t} ({w:.1f})" for t, w in state.prompts[:4]])
-st.info(prompt_text)
+    print("\n" + "-"*30)
+    print("🎵 Music is playing!")
+    print("Commands:")
+    print("  [Number] : Update BPM (e.g. '120')")
+    print("  'q'      : Quit")
+    print("-"*30)
 
-# Start / Stop
-if state.running:
-    st.success("🔊 Music playing — audio plays on this machine. Check system volume.")
-    if state.chunks_received > 0:
-        st.caption(f"Received {state.chunks_received} audio chunks")
-    if state.last_applied_bpm is not None:
-        st.caption(f"Tempo: {state.last_applied_bpm} BPM")
-    if st.button("⏹ Stop music"):
+    def input_thread_func(state):
+        while state.running:
+            try:
+                cmd = input().strip().lower()
+                if cmd == 'q':
+                    state.running = False
+                elif cmd.isdigit():
+                    new_bpm = int(cmd)
+                    if 60 <= new_bpm <= 180:
+                        state.bpm = new_bpm
+                        print(f"\n✅ BPM updated to {new_bpm}")
+                    else:
+                        print("\n⚠️ BPM must be between 60 and 180")
+            except EOFError:
+                state.running = False
+                break
+
+    in_thread = threading.Thread(target=input_thread_func, args=(state,))
+    in_thread.daemon = True
+    in_thread.start()
+
+    try:
+        last_status = ""
+        while state.running:
+            if state.error:
+                print(f"\n❌ Error: {state.error}")
+                state.running = False
+                break
+            
+            prompt_text = " • ".join([f"{t} ({w:.1f})" for t, w in state.prompts[:3]])
+            status = f"[BPM: {state.bpm:>3}] [Chunks: {state.chunks_received:>3}] {prompt_text[:40]}..."
+            
+            if status != last_status:
+                print(f"\r{status}", end="", flush=True)
+                last_status = status
+            
+            time.sleep(0.5)
+            
+    except KeyboardInterrupt:
+        print("\nStopping...")
         state.running = False
-        st.rerun()
-    if state.error:
-        st.error(f"Error: {state.error}")
-else:
-    if st.button("▶ Play", type="primary"):
-        if not api_key:
-            st.error("Google AI Studio API key not found. Please set `GOOGLE_API_KEY` in your `.env` file.")
-        else:
-            state.running = True
-            state.prompts = state.prompts  # ensure latest
-            state.bpm = heartbeat
-            t = threading.Thread(target=run_music_thread, args=(api_key, state))
-            t.daemon = True
-            t.start()
-            st.session_state.music_thread = t
-            st.rerun()
 
-st.divider()
-with st.expander("Troubleshooting"):
-    st.markdown("""
-- **No sound?** Audio plays on the machine running Streamlit. Run locally (`streamlit run app.py`) and check system volume.
-- **Slider not changing music?** Move the slider and wait 1–2 seconds. Lyria needs a moment to apply tempo changes. Check that "Tempo: X BPM" updates when you move the slider.
-- **Error shown?** Check your API key in your `.env` file. Lyria requires a valid Gemini API key.
-- **Still stuck?** Move the heartbeat slider to refresh the page and see the latest status.
-    """)
-st.caption("Built with Lyria RealTime • Open-Meteo • Streamlit")
+    print("\n👋 Goodbye!")
+
+if __name__ == "__main__":
+    main()
