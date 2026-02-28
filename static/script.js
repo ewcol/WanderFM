@@ -9,6 +9,8 @@ const stopBtn = document.getElementById('stop-btn');
 const statusBadge = document.getElementById('running-status');
 const statusText = statusBadge.querySelector('.status-text');
 const promptsBox = document.getElementById('prompts-box');
+const syncSpotifyBtn = document.getElementById('sync-spotify-btn');
+const spotifyStatus = document.getElementById('spotify-status');
 
 let isRunning = false;
 let pollInterval = null;
@@ -94,6 +96,52 @@ async function updateCity() {
     }
 }
 
+async function syncSpotify() {
+    syncSpotifyBtn.disabled = true;
+    syncSpotifyBtn.textContent = '🔄 Syncing...';
+    spotifyStatus.textContent = 'Authenticating and analyzing taste...';
+    
+    try {
+        const response = await fetch('/api/spotify/sync', { method: 'POST' });
+        const data = await response.json();
+        
+        if (response.ok) {
+            if (data.status === 'success') {
+                syncSpotifyBtn.textContent = '✅ Synced';
+                spotifyStatus.textContent = `Applied styles: ${data.styles.join(', ')}`;
+                updateStatus();
+            } else if (data.status === 'needs_auth') {
+                spotifyStatus.textContent = 'Please authorize in the new window...';
+                // Open auth URL in a new window
+                const authWindow = window.open(data.auth_url, 'Spotify Auth', 'width=600,height=800');
+                
+                // Poll for completion
+                const checkAuth = setInterval(async () => {
+                    const statusRes = await fetch('/api/status');
+                    const statusData = await statusRes.json();
+                    if (statusData.prompts && statusData.prompts.length > 0) {
+                        // Assuming prompts changed means sync finished
+                        clearInterval(checkAuth);
+                        syncSpotifyBtn.textContent = '✅ Synced';
+                        spotifyStatus.textContent = 'Taste synchronized!';
+                        if (authWindow) authWindow.close();
+                        updateStatus();
+                    }
+                }, 2000);
+            } else {
+                throw new Error(data.message);
+            }
+        } else {
+            throw new Error(data.detail || data.message);
+        }
+    } catch (e) {
+        alert('Spotify Sync Failed: ' + e.message);
+        syncSpotifyBtn.disabled = false;
+        syncSpotifyBtn.textContent = '🎧 Sync Spotify Taste';
+        spotifyStatus.textContent = 'Authentication failed or timed out.';
+    }
+}
+
 bpmSlider.addEventListener('input', (e) => {
     bpmValue.textContent = e.target.value;
 });
@@ -105,6 +153,7 @@ bpmSlider.addEventListener('change', (e) => {
 playBtn.addEventListener('click', startMusic);
 stopBtn.addEventListener('click', stopMusic);
 updateCityBtn.addEventListener('click', updateCity);
+syncSpotifyBtn.addEventListener('click', syncSpotify);
 
 // Initial poll
 updateStatus();

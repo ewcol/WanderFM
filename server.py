@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import os
@@ -12,6 +13,8 @@ from src.runner import run_music_thread
 from src.weather import get_weather
 from src.prompts import build_combined_prompts, get_time_of_day_prompts
 from src.location import reverse_geocode, search_nearby
+from src.spotify import SpotifyClient
+from src.prompts import get_spotify_style_prompts
 
 load_dotenv()
 
@@ -39,6 +42,17 @@ async def get_status():
         "city": getattr(state, "current_city", "Unknown")
     }
 
+@app.get("/")
+async def root(code: Optional[str] = None):
+    if code:
+        logger.info(f"Root endpoint received Spotify code: {code[:10]}...")
+        result = await spotify_callback(code)
+        # Return a simple success message that closes the window or redirects back
+        return HTMLResponse(content=f"<h1>Success!</h1><p>You can close this window now.</p><script>window.close();</script>")
+    
+    # Return the landing page
+    return FileResponse("static/index.html")
+
 @app.post("/api/start")
 async def start_music():
     global music_thread
@@ -63,6 +77,40 @@ async def start_music():
 async def stop_music():
     state.running = False
     return {"message": "Music stopping"}
+
+@app.post("/api/spotify/sync")
+async def sync_spotify():
+    logger.info("🛰️ Received Spotify sync request.")
+    sp_client = SpotifyClient()
+    if sp_client.authenticate():
+        logger.info("✅ Spotify authenticated (cached). Fetching tracks...")
+        tracks = sp_client.get_personalized_tracks()
+        if tracks:
+            logger.info(f"✨ Analyzing {len(tracks)} tracks with Gemini...")
+            state.spotify_prompts = get_spotify_style_prompts(tracks)
+            if state.spotify_prompts:
+                state.prompts = build_combined_prompts(None, state.bpm, spotify_prompts=state.spotify_prompts)
+                return {"status": "success", "message": "Spotify synced", "styles": [p[0] for p in state.spotify_prompts]}
+        return {"status": "error", "message": "No tracks found or could not generate styles"}
+    else:
+        # Return auth URL so frontend can open it
+        auth_url = sp_client.get_authorize_url()
+        return {"status": "needs_auth", "auth_url": auth_url}
+
+@app.get("/api/spotify/callback")
+async def spotify_callback(code: str):
+    logger.info(f"📫 Received Spotify callback with code: {code[:10]}...")
+    sp_client = SpotifyClient()
+    if sp_client.authenticate_with_code(code):
+        logger.info("✅ Callback auth successful. Processing tracks...")
+        # Once authenticated, immediately update state with personalization
+        tracks = sp_client.get_personalized_tracks()
+        if tracks:
+            state.spotify_prompts = get_spotify_style_prompts(tracks)
+            state.prompts = build_combined_prompts(None, state.bpm, spotify_prompts=state.spotify_prompts)
+            styles = [p[0] for p in state.spotify_prompts]
+            return HTMLResponse(content=f"<h1>Authentication Successful!</h1><p>WanderFM has analyzed your taste and applied <b>{len(styles)}</b> personalized styles.</p><script>setTimeout(() => window.close(), 2000);</script>")
+    return HTMLResponse(content="<h1>Authentication Failed</h1><p>Please check server logs.</p>", status_code=500)
 
 @app.post("/api/update")
 async def update_state(req: UpdateRequest):
@@ -89,7 +137,7 @@ async def update_state(req: UpdateRequest):
             else:
                 logger.info("No nearby place found")
 
-            state.prompts = build_combined_prompts(weather_data, state.bpm, geocoded, nearby)
+            state.prompts = build_combined_prompts(weather_data, state.bpm, geocoded, nearby, spotify_prompts=state.spotify_prompts)
             state.current_city = geocoded.formatted_address if geocoded else f"{req.lat:.4f}, {req.lon:.4f}"
 
             logger.info(f"Built {len(state.prompts)} prompts for Lyria:")

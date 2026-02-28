@@ -48,8 +48,31 @@ def main():
     else:
         print("⚠️ City not found. Using default prompts.")
 
-    # Build prompts from time + weather
-    state.prompts = build_combined_prompts(weather_data, state.bpm)
+    # Spotify Integration
+    sync_spotify = input("Sync with Spotify for personalized music? (y/n, default: n): ").strip().lower()
+    if sync_spotify == 'y':
+        from src.spotify import SpotifyClient
+        from src.prompts import get_spotify_style_prompts
+        
+        print("🔐 Authenticating with Spotify...")
+        sp_client = SpotifyClient()
+        if sp_client.authenticate():
+            print("📥 Fetching your listening history...")
+            tracks = sp_client.get_personalized_tracks()
+            if tracks:
+                print(f"✨ Analyzing {len(tracks)} tracks with Gemini...")
+                state.spotify_prompts = get_spotify_style_prompts(tracks)
+                if state.spotify_prompts:
+                    print(f"✅ Personalized Styles: {', '.join([p[0] for p in state.spotify_prompts])}")
+                else:
+                    print("⚠️ Could not generate personalized styles.")
+            else:
+                print("⚠️ No tracks found in your Spotify profile.")
+        else:
+            print("⚠️ Spotify sync failed. Continuing with default music.")
+
+    # Build prompts from time + weather + spotify
+    state.prompts = build_combined_prompts(weather_data, state.bpm, spotify_prompts=state.spotify_prompts)
     
     now = datetime.now()
     print(f"🕒 Local Time: {now.strftime('%H:%M')} ({now.strftime('%A, %B %d')})")
