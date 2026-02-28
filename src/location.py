@@ -128,7 +128,7 @@ def search_nearby(
     lat: float,
     lon: float,
     radius_meters: int = 100,
-    max_results: int = 3,
+    max_results: int = 1,
 ) -> list[NearbyPlace]:
     """Find nearby places via the Google Places Nearby Search API.
 

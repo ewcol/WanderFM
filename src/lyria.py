@@ -101,7 +101,9 @@ async def apply_config_updates(session: Any, state: MusicState) -> None:
                 ]
                 await session.set_weighted_prompts(prompts=weighted)
                 last_prompts = current_prompts.copy()
-                logger.info("Sent weighted prompts update to Lyria")
+                logger.info("Sent weighted prompts update to Lyria:")
+                for t, w in current_prompts:
+                    logger.info(f"  [{w:.2f}] {t}")
 
         except Exception as e:
             logger.error(f"Error in apply_config_updates: {e}")
@@ -125,12 +127,17 @@ async def run_session(
     logger.info(f"Connecting to Lyria session (model: {MODEL})...")
     try:
         async with client.aio.live.music.connect(model=MODEL) as session:
+            initial_prompts = state.prompts or [("ambient", 1.0)]
+            logger.info("Initial prompts sent to Lyria:")
+            for t, w in initial_prompts:
+                logger.info(f"  [{w:.2f}] {t}")
             await session.set_weighted_prompts(
                 prompts=[
                     types.WeightedPrompt(text=t, weight=w)
-                    for t, w in (state.prompts or [("ambient", 1.0)])
+                    for t, w in initial_prompts
                 ]
             )
+            logger.info(f"Initial BPM: {state.bpm}")
             await session.set_music_generation_config(
                 config=types.LiveMusicGenerationConfig(
                     bpm=state.bpm,
