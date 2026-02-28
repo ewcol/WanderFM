@@ -89,7 +89,7 @@ async def update_state(req: UpdateRequest):
             else:
                 logger.info("No nearby place found")
 
-            state.prompts = build_combined_prompts(weather_data, geocoded, nearby)
+            state.prompts = build_combined_prompts(weather_data, state.bpm, geocoded, nearby)
             state.current_city = geocoded.formatted_address if geocoded else f"{req.lat:.4f}, {req.lon:.4f}"
 
             logger.info(f"Built {len(state.prompts)} prompts for Lyria:")

@@ -71,15 +71,6 @@ def filter_coherency(prompts: list[tuple[str, float]], bpm: int) -> list[tuple[s
     forbidden = {"ambient", "soft", "minimal", "gentle", "peaceful", "dreamy", "mellow", "chill", "relaxing", "cozy"}
     return [(t, w) for t, w in prompts if not any(word in t.lower() for word in forbidden)]
 
-
-def build_combined_prompts(weather: Optional[WeatherData], bpm: int = 100) -> list[tuple[str, float]]:
-    """Combine time-of-day and weather prompts for Lyria."""
-    time_prompts = get_time_of_day_prompts()
-    weather_prompts = get_weather_prompts(weather) if weather else []
-    
-    combined = time_prompts + weather_prompts
-    return filter_coherency(combined, bpm)[:6]
-
 def get_bpm_prompts(bpm: int) -> list[tuple[str, float]]:
     """
     Generate weighted prompts based on BPM to reinforce tempo.
@@ -100,6 +91,7 @@ def get_bpm_prompts(bpm: int) -> list[tuple[str, float]]:
         prompts.extend([("fast energetic drive", 1.5), ("high tempo driving rhythm", 1.3)])
         
     return prompts
+
 _PLACE_TYPE_PROMPTS: dict[str, tuple[str, float]] = {
     # Automotive
     "gas_station":             ("driving road trip", 0.7),
@@ -244,9 +236,9 @@ def get_location_prompts(geocoded=None, nearby=None) -> list[tuple[str, float]]:
     return prompts[:2]
 
 
-def build_combined_prompts(weather: WeatherData, geocoded=None, nearby=None) -> list[tuple[str, float]]:
+def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None) -> list[tuple[str, float]]:
     """Combine time-of-day, weather, and location prompts for Lyria."""
     time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:2]
-    weather_prompts = get_weather_prompts(weather)[:2]
+    weather_prompts = get_weather_prompts(weather)[:2] if weather else []
     location_prompts = get_location_prompts(geocoded, nearby)
-    return (time_prompts + weather_prompts + location_prompts)[:6]
+    return filter_coherency(time_prompts + weather_prompts + location_prompts, bpm)[:6]
