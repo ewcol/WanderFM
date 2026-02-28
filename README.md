@@ -36,13 +36,13 @@ LYRIA_API_KEY=your_lyria_api_key # Can be the same as GOOGLE_API_KEY
 # Spotify Personalization (Optional)
 CLIENT_ID=your_spotify_client_id
 CLIENT_SECRET=your_spotify_client_secret
-REDIRECT_URI=your_redirect_uri
+REDIRECT_URI=http://127.0.0.1:8000
 ```
 
 #### How to get Spotify Credentials:
 1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
 2. Create a new App.
-3. In the App settings, add `http://localhost:8000/api/spotify/callback` to the **Redirect URIs**.
+3. In the App settings, add `http://127.0.0.1:8000` to the **Redirect URIs**.
 4. Copy the **Client ID** and **Client Secret** to your `.env` file.
 
 ### 3. Run
