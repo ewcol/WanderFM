@@ -1,5 +1,4 @@
 const bpmSlider = document.getElementById('bpm-slider');
-const bpmValue = document.getElementById('bpm-value');
 const chunksValue = document.getElementById('chunks-value');
 const latInput = document.getElementById('lat-input');
 const lonInput = document.getElementById('lon-input');
@@ -21,6 +20,11 @@ let pollInterval = null;
 let selectedGenre = '';
 let selectedExperience = '';
 
+function updatePulseRate(bpm) {
+    const duration = 60 / bpm;
+    document.documentElement.style.setProperty('--pulse-duration', `${duration}s`);
+}
+
 async function updateStatus() {
     try {
         const response = await fetch('/api/status');
@@ -28,7 +32,7 @@ async function updateStatus() {
 
         isRunning = data.running;
         bpmSlider.value = data.bpm;
-        bpmValue.textContent = data.bpm;
+        updatePulseRate(data.bpm);
         chunksValue.textContent = data.chunks_received;
         
         if (data.running) {
@@ -75,7 +79,7 @@ async function stopMusic() {
 }
 
 async function updateBpm(bpm) {
-    bpmValue.textContent = bpm;
+    updatePulseRate(bpm);
     await fetch('/api/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,7 +197,7 @@ async function syncSpotify() {
 }
 
 bpmSlider.addEventListener('input', (e) => {
-    bpmValue.textContent = e.target.value;
+    updatePulseRate(e.target.value);
 });
 
 bpmSlider.addEventListener('change', (e) => {

@@ -69,7 +69,7 @@ class SpotifyClient:
             logger.error(f"❌ Spotify authentication Error: {e}")
             return False
 
-    def get_personalized_tracks(self, limit=20):
+    def get_personalized_tracks(self, limit=40):
         """
         Fetch recently played and liked songs.
         Returns a list of simplified track dictionaries.
@@ -92,16 +92,16 @@ class SpotifyClient:
         except Exception as e:
             logger.error(f"⚠️ Could not fetch recently played: {e}")
 
-        # 2. Get Liked Songs
-        try:
-            liked = self.sp.current_user_saved_tracks(limit=limit)
-            logger.info(f"❤️ Pulled {len(liked['items'])} liked songs:")
-            for item in liked['items']:
-                track = item['track']
-                track_info = {'name': track['name'], 'artist': track['artists'][0]['name'], 'type': 'liked_song'}
-                tracks.append(track_info)
-                logger.info(f"   - {track_info['name']} by {track_info['artist']}")
-        except Exception as e:
-            logger.error(f"⚠️ Could not fetch liked songs: {e}")
+        # # 2. Get Liked Songs
+        # try:
+        #     liked = self.sp.current_user_saved_tracks(limit=limit)
+        #     logger.info(f"❤️ Pulled {len(liked['items'])} liked songs:")
+        #     for item in liked['items']:
+        #         track = item['track']
+        #         track_info = {'name': track['name'], 'artist': track['artists'][0]['name'], 'type': 'liked_song'}
+        #         tracks.append(track_info)
+        #         logger.info(f"   - {track_info['name']} by {track_info['artist']}")
+        # except Exception as e:
+        #     logger.error(f"⚠️ Could not fetch liked songs: {e}")
 
         return tracks
