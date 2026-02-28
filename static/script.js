@@ -1,7 +1,8 @@
 const bpmSlider = document.getElementById('bpm-slider');
 const bpmValue = document.getElementById('bpm-value');
 const chunksValue = document.getElementById('chunks-value');
-const cityInput = document.getElementById('city-input');
+const latInput = document.getElementById('lat-input');
+const lonInput = document.getElementById('lon-input');
 const updateCityBtn = document.getElementById('update-city-btn');
 const playBtn = document.getElementById('play-btn');
 const stopBtn = document.getElementById('stop-btn');
@@ -71,19 +72,24 @@ async function updateBpm(bpm) {
 }
 
 async function updateCity() {
-    const city = cityInput.value;
+    const lat = parseFloat(latInput.value);
+    const lon = parseFloat(lonInput.value);
+    if (isNaN(lat) || isNaN(lon)) {
+        alert('Please enter valid latitude and longitude.');
+        return;
+    }
     updateCityBtn.textContent = '...';
     try {
         const response = await fetch('/api/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ city })
+            body: JSON.stringify({ lat, lon })
         });
-        if (!response.ok) throw new Error('City not found');
+        if (!response.ok) throw new Error('Could not fetch weather for coordinates');
         updateCityBtn.textContent = 'Update';
         updateStatus();
     } catch (e) {
-        alert('Could not find city or fetch weather.');
+        alert('Could not fetch weather for coordinates.');
         updateCityBtn.textContent = 'Update';
     }
 }

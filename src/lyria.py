@@ -143,6 +143,7 @@ async def run_session(
                     for t, w in (filtered_prompts + bpm_prompts)
                 ]
             )
+            logger.info(f"Initial BPM: {state.bpm}")
             await session.set_music_generation_config(
                 config=types.LiveMusicGenerationConfig(
                     bpm=state.bpm,
