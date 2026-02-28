@@ -30,6 +30,8 @@ class UpdateRequest(BaseModel):
     bpm: Optional[int] = None
     lat: Optional[float] = None
     lon: Optional[float] = None
+    genre: Optional[str] = None
+    experience: Optional[str] = None
 
 @app.get("/api/status")
 async def get_status():
@@ -64,7 +66,7 @@ async def start_music():
     
     # Ensure prompts are set if not already
     if not state.prompts:
-        state.prompts = build_combined_prompts(None, state.bpm)
+        state.prompts = build_combined_prompts(None, state.bpm, genre=state.genre, experience=state.experience)
     
     state.running = True
     state.error = None
@@ -120,7 +122,14 @@ async def update_state(req: UpdateRequest):
             logger.info(f"BPM updated to {req.bpm}")
         else:
             raise HTTPException(status_code=400, detail="BPM must be 60-180")
-    
+
+    if req.genre is not None:
+        state.genre = req.genre or None
+        logger.info(f"Genre updated to {state.genre}")
+    if req.experience is not None:
+        state.experience = req.experience or None
+        logger.info(f"Experience updated to {state.experience}")
+
     if req.lat is not None and req.lon is not None:
         try:
             weather_data = get_weather(req.lat, req.lon)
@@ -137,7 +146,7 @@ async def update_state(req: UpdateRequest):
             else:
                 logger.info("No nearby place found")
 
-            state.prompts = build_combined_prompts(weather_data, state.bpm, geocoded, nearby, spotify_prompts=state.spotify_prompts)
+            state.prompts = build_combined_prompts(weather_data, state.bpm, geocoded, nearby, genre=state.genre, experience=state.experience, spotify_prompts=state.spotify_prompts)
             state.current_city = geocoded.formatted_address if geocoded else f"{req.lat:.4f}, {req.lon:.4f}"
 
             logger.info(f"Built {len(state.prompts)} prompts for Lyria:")

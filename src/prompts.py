@@ -292,16 +292,25 @@ def get_spotify_style_prompts(tracks: list[dict]) -> list[tuple[str, float]]:
         return []
 
 
-def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None, spotify_prompts: list[tuple[str, float]] = None) -> list[tuple[str, float]]:
-    """Combine time-of-day, weather, location, and Spotify prompts for Lyria."""
-    time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:2]
-    weather_prompts = get_weather_prompts(weather)[:2] if weather else []
+def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None, *, genre: Optional[str] = None, experience: Optional[str] = None, spotify_prompts: list[tuple[str, float]] = None) -> list[tuple[str, float]]:
+    """Combine time-of-day, weather, location, genre, and experience prompts for Lyria."""
+    # Genre and experience get high-priority slots
+    preference_prompts: list[tuple[str, float]] = []
+    if genre:
+        preference_prompts.append((f"{genre} style", 1.5))
+    if experience:
+        preference_prompts.append((f"{experience} mood", 1.8))
+
+    # Reduce time/weather slots when preferences are active to stay within 6-prompt cap
+    time_limit = 1 if preference_prompts else 2
+    weather_limit = 1 if preference_prompts else 2
+
+    time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:time_limit]
+    weather_prompts = get_weather_prompts(weather)[:weather_limit] if weather else []
     location_prompts = get_location_prompts(geocoded, nearby)
-    
+
     # Mix in Spotify prompts if available
     personalized = spotify_prompts if spotify_prompts else []
-    
-    # Combine everything, prioritize Spotify if available
-    all_prompts = personalized + time_prompts + weather_prompts + location_prompts
-    
+    all_prompts = preference_prompts + personalized + time_prompts + weather_prompts + location_prompts
+    logger.info(f"Building combined prompts: {all_prompts}")
     return filter_coherency(all_prompts, bpm)[:8]

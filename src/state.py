@@ -17,3 +17,5 @@ class MusicState:
         self.error: Optional[str] = None
         self.chunks_received: int = 0
         self.last_applied_bpm: Optional[int] = None
+        self.genre: Optional[str] = None
+        self.experience: Optional[str] = None
