@@ -12,6 +12,7 @@ class MusicState:
     def __init__(self) -> None:
         self.bpm: int = 80
         self.prompts: list[tuple[str, float]] = []
+        self.spotify_prompts: list[tuple[str, float]] = []
         self.running: bool = False
         self.error: Optional[str] = None
         self.chunks_received: int = 0

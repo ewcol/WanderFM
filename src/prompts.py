@@ -2,7 +2,12 @@
 
 from datetime import datetime
 from typing import Optional
+import os
+import logging
+from google import genai
 from src.weather import WeatherData
+
+logger = logging.getLogger("WanderFM.Prompts")
 
 
 def get_time_of_day_prompts() -> list[tuple[str, float]]:
@@ -231,12 +236,63 @@ def get_location_prompts(geocoded=None, nearby=None) -> list[tuple[str, float]]:
             prompts.append(_PLACE_TYPE_PROMPTS[nearby.primary_type])
         if not prompts and nearby.editorial_summary:
             prompts.append((nearby.editorial_summary[:60], 0.9))
-    if not prompts and geocoded and geocoded.neighborhood:
         prompts.append((f"{geocoded.neighborhood} neighborhood", 0.7))
     return prompts[:2]
 
 
-def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None, *, genre: Optional[str] = None, experience: Optional[str] = None) -> list[tuple[str, float]]:
+def get_spotify_style_prompts(tracks: list[dict]) -> list[tuple[str, float]]:
+    """
+    Use Gemini to summarize Spotify history into 3-5 musical style prompts.
+    """
+    if not tracks:
+        logger.warning("⚠️ No tracks provided for Spotify style generation.")
+        return []
+
+    logger.info(f"🧠 Generating style prompts from {len(tracks)} Spotify tracks...")
+    # Format tracks for the prompt
+    track_list = "\n".join([f"- {t['name']} by {t['artist']} ({t['type']})" for t in tracks])
+    
+    prompt = f"""
+    Based on the following list of recently played and liked songs from Spotify, 
+    generate 3 to 5 short, descriptive Gemini Lyria musical style prompts.
+    
+    Lyria prompts should be descriptive, e.g., "Deep house with atmospheric pads", "Mellow acoustic folk", "Indie pop with bright synths".
+    
+    Output ONLY a comma-separated list of these prompts. Do not include any other text.
+    
+    Tracks:
+    {track_list}
+    """
+
+    try:
+        api_key = os.getenv("LYRIA_API_KEY")
+        if not api_key:
+            return []
+            
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=prompt
+        )
+        
+        if not response.text:
+            logger.warning("⚠️ Gemini returned empty style response.")
+            return []
+            
+        style_list = [s.strip() for s in response.text.split(",")]
+        logger.info(f"✨ Gemini generated styles: {style_list}")
+        # Assign weights, slightly higher for the first few
+        weighted = []
+        for i, style in enumerate(style_list[:5]):
+             weight = 1.2 if i == 0 else (1.1 if i == 1 else 1.0)
+             weighted.append((style, weight))
+        return weighted
+    except Exception as e:
+        logger.error(f"❌ Gemini Prompt Generation Failed: {e}")
+        return []
+
+
+def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None, *, genre: Optional[str] = None, experience: Optional[str] = None, spotify_prompts: list[tuple[str, float]] = None) -> list[tuple[str, float]]:
     """Combine time-of-day, weather, location, genre, and experience prompts for Lyria."""
     # Genre and experience get high-priority slots
     preference_prompts: list[tuple[str, float]] = []
@@ -252,4 +308,9 @@ def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, 
     time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:time_limit]
     weather_prompts = get_weather_prompts(weather)[:weather_limit] if weather else []
     location_prompts = get_location_prompts(geocoded, nearby)
-    return filter_coherency(preference_prompts + time_prompts + weather_prompts + location_prompts, bpm)[:6]
+
+    # Mix in Spotify prompts if available
+    personalized = spotify_prompts if spotify_prompts else []
+    all_prompts = preference_prompts + personalized + time_prompts + weather_prompts + location_prompts
+    logger.info(f"Building combined prompts: {all_prompts}")
+    return filter_coherency(all_prompts, bpm)[:8]
