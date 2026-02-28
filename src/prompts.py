@@ -12,19 +12,19 @@ def get_time_of_day_prompts() -> list[tuple[str, float]]:
     """
     hour = datetime.now().hour
     if 5 <= hour < 9:
-        return [("gentle morning atmosphere", 1.5), ("soft ambient", 1.0), ("peaceful awakening", 0.8)]
+        return [("gentle morning atmosphere", 0.9), ("soft awakening", 0.7)]
     if 9 <= hour < 12:
-        return [("bright energetic morning", 1.2), ("upbeat acoustic", 1.0), ("fresh and lively", 0.8)]
+        return [("bright energetic morning", 0.8), ("fresh and lively", 0.7)]
     if 12 <= hour < 14:
-        return [("midday focus", 1.0), ("calm productivity", 1.2), ("minimal ambient", 0.8)]
+        return [("midday focus", 0.7), ("minimal ambient", 0.6)]
     if 14 <= hour < 17:
-        return [("afternoon warmth", 1.2), ("relaxed groove", 1.0), ("sunny vibes", 0.8)]
+        return [("afternoon warmth", 0.8), ("sunny vibes", 0.6)]
     if 17 <= hour < 20:
-        return [("golden hour", 1.3), ("warm sunset", 1.0), ("mellow jazz", 0.7)]
+        return [("golden hour sunset", 0.9), ("mellow sunset vibes", 0.7)]
     if 20 <= hour < 23:
-        return [("evening chill", 1.2), ("lo-fi beats", 1.0), ("relaxing ambient", 0.9)]
+        return [("evening chill", 0.8), ("relaxing background", 0.7)]
     # 23-5: night
-    return [("late night ambient", 1.5), ("dreamy atmospheric", 1.0), ("soft drone", 0.8)]
+    return [("late night ambient", 0.9), ("dreamy atmospheric", 0.7)]
 
 
 def get_weather_prompts(weather: WeatherData) -> list[tuple[str, float]]:
@@ -36,21 +36,13 @@ def get_weather_prompts(weather: WeatherData) -> list[tuple[str, float]]:
     cond = weather.condition
     temp = weather.temperature
     if cond == "sunny" or cond == "clear":
-        prompts.append(("bright cheerful", 1.2))
-        prompts.append(("sunny acoustic", 1.0))
-    elif cond == "cloudy":
-        prompts.append(("mellow overcast", 1.2))
-        prompts.append(("soft ambient", 1.0))
-    elif cond == "rainy":
-        prompts.append(("rainy day ambient", 1.5))
-        prompts.append(("cozy indoor", 1.0))
-        prompts.append(("relaxing rain sounds texture", 0.8))
+        prompts.extend([("bright synths", 1.2), ("acoustic guitar", 1.1), ("higher frequencies", 1.0)])
+    elif cond == "cloudy" or cond == "rainy":
+        prompts.extend([("low pass filters", 1.2), ("warm textures", 1.1), ("rhodes piano", 1.0), ("more reverb", 0.9)])
     elif cond == "snowy":
-        prompts.append(("winter ambient", 1.3))
-        prompts.append(("peaceful cold", 1.0))
+        prompts.extend([("winter breeze", 1.1), ("peaceful cold", 1.0), ("soft crystalline textures", 0.8)])
     elif cond == "stormy":
-        prompts.append(("dramatic atmospheric", 1.3))
-        prompts.append(("intense ambient", 1.0))
+        prompts.extend([("minor keys", 1.2), ("distorted textures", 1.1), ("aggressive bass", 1.0)])
     elif cond == "foggy":
         prompts.append(("misty ambient", 1.3))
         prompts.append(("ethereal drone", 1.0))
@@ -62,11 +54,43 @@ def get_weather_prompts(weather: WeatherData) -> list[tuple[str, float]]:
 
     # Temperature influence
     if temp > 30:
-        prompts.append(("hot summer vibes", 0.6))
+        prompts.append(("warm summer heat", 0.6))
     elif temp < 0:
-        prompts.append(("cold winter", 0.5))
+        prompts.append(("chilly winter crisp", 0.6))
     return prompts
 
+
+def filter_coherency(prompts: list[tuple[str, float]], bpm: int) -> list[tuple[str, float]]:
+    """
+    Remove "soft" or "relaxing" prompts if the BPM is high (sports mode).
+    Ensures the model doesn't get conflicting energy signals.
+    """
+    if bpm < 130:
+        return prompts
+        
+    forbidden = {"ambient", "soft", "minimal", "gentle", "peaceful", "dreamy", "mellow", "chill", "relaxing", "cozy"}
+    return [(t, w) for t, w in prompts if not any(word in t.lower() for word in forbidden)]
+
+def get_bpm_prompts(bpm: int) -> list[tuple[str, float]]:
+    """
+    Generate weighted prompts based on BPM to reinforce tempo.
+    Uses exact value and high weights to ensure model compliance.
+    """
+    # High-priority exact BPM markers (Anchor Layer)
+    prompts = [
+        (f"exactly {bpm} bpm", 2.2),
+        (f"tempo: {bpm} beats per minute", 1.8),
+        (f"precise rhythmic pulse at {bpm} bpm", 1.5)
+    ]
+    
+    if bpm < 80:
+        prompts.extend([("slow steady pace", 1.0), ("relaxed tempo", 0.8)])
+    elif bpm < 120:
+        prompts.extend([("moderate rhythmic pulse", 1.0), ("steady consistent beat", 0.8)])
+    else: # 120+
+        prompts.extend([("fast energetic drive", 1.5), ("high tempo driving rhythm", 1.3)])
+        
+    return prompts
 
 _PLACE_TYPE_PROMPTS: dict[str, tuple[str, float]] = {
     # Automotive
@@ -212,9 +236,9 @@ def get_location_prompts(geocoded=None, nearby=None) -> list[tuple[str, float]]:
     return prompts[:2]
 
 
-def build_combined_prompts(weather: WeatherData, geocoded=None, nearby=None) -> list[tuple[str, float]]:
+def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None) -> list[tuple[str, float]]:
     """Combine time-of-day, weather, and location prompts for Lyria."""
     time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:2]
-    weather_prompts = get_weather_prompts(weather)[:2]
+    weather_prompts = get_weather_prompts(weather)[:2] if weather else []
     location_prompts = get_location_prompts(geocoded, nearby)
-    return (time_prompts + weather_prompts + location_prompts)[:6]
+    return filter_coherency(time_prompts + weather_prompts + location_prompts, bpm)[:6]

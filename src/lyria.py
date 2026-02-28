@@ -12,6 +12,8 @@ from google import genai
 from google.genai import types
 
 from src.state import MusicState
+from src.prompts import get_bpm_prompts, filter_coherency
+
 
 MODEL = "models/lyria-realtime-exp"
 
@@ -93,17 +95,21 @@ async def apply_config_updates(session: Any, state: MusicState) -> None:
                 last_bpm = current_bpm
                 state.last_applied_bpm = current_bpm
                 logger.info(f"Sent BPM update to Lyria: {current_bpm} BPM")
+                
+                # Force prompt update when BPM changes to reinforce tempo
+                last_prompts = None 
 
-            if current_prompts and current_prompts != last_prompts:
+            if current_prompts and (current_prompts != last_prompts or last_bpm == current_bpm):
+                # Apply coherency filter reactively (e.g. remove "soft" prompts if HR is high)
+                filtered_prompts = filter_coherency(current_prompts, current_bpm)
+                bpm_prompts = get_bpm_prompts(current_bpm)
                 weighted = [
                     types.WeightedPrompt(text=t, weight=w)
-                    for t, w in current_prompts
+                    for t, w in (filtered_prompts + bpm_prompts)
                 ]
                 await session.set_weighted_prompts(prompts=weighted)
                 last_prompts = current_prompts.copy()
-                logger.info("Sent weighted prompts update to Lyria:")
-                for t, w in current_prompts:
-                    logger.info(f"  [{w:.2f}] {t}")
+                logger.info(f"Sent weighted prompts: {[p.text for p in weighted]}")
 
         except Exception as e:
             logger.error(f"Error in apply_config_updates: {e}")
@@ -127,14 +133,14 @@ async def run_session(
     logger.info(f"Connecting to Lyria session (model: {MODEL})...")
     try:
         async with client.aio.live.music.connect(model=MODEL) as session:
-            initial_prompts = state.prompts or [("ambient", 1.0)]
-            logger.info("Initial prompts sent to Lyria:")
-            for t, w in initial_prompts:
-                logger.info(f"  [{w:.2f}] {t}")
+            user_prompts = state.prompts or [("ambient", 1.0)]
+            # Apply coherency filter on startup
+            filtered_prompts = filter_coherency(user_prompts, state.bpm)
+            bpm_prompts = get_bpm_prompts(state.bpm)
             await session.set_weighted_prompts(
                 prompts=[
                     types.WeightedPrompt(text=t, weight=w)
-                    for t, w in initial_prompts
+                    for t, w in (filtered_prompts + bpm_prompts)
                 ]
             )
             logger.info(f"Initial BPM: {state.bpm}")

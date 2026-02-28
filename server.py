@@ -50,13 +50,8 @@ async def start_music():
     
     # Ensure prompts are set if not already
     if not state.prompts:
-        state.prompts = get_time_of_day_prompts()
-
-    logger.info(f"Starting music | BPM: {state.bpm}")
-    logger.info("Active prompts at start:")
-    for t, w in state.prompts:
-        logger.info(f"  [{w:.2f}] {t}")
-
+        state.prompts = build_combined_prompts(None, state.bpm)
+    
     state.running = True
     state.error = None
     music_thread = threading.Thread(target=run_music_thread, args=(api_key, state))
@@ -94,7 +89,7 @@ async def update_state(req: UpdateRequest):
             else:
                 logger.info("No nearby place found")
 
-            state.prompts = build_combined_prompts(weather_data, geocoded, nearby)
+            state.prompts = build_combined_prompts(weather_data, state.bpm, geocoded, nearby)
             state.current_city = geocoded.formatted_address if geocoded else f"{req.lat:.4f}, {req.lon:.4f}"
 
             logger.info(f"Built {len(state.prompts)} prompts for Lyria:")

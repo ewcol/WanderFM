@@ -7,7 +7,7 @@ from typing import Optional
 
 
 class MusicState:
-    """Mutable state shared between Streamlit UI and Lyria music thread."""
+    """Mutable state shared between UI and Lyria music thread."""
 
     def __init__(self) -> None:
         self.bpm: int = 80

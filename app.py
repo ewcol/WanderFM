@@ -49,10 +49,7 @@ def main():
         print("⚠️ City not found. Using default prompts.")
 
     # Build prompts from time + weather
-    if weather_data:
-        state.prompts = build_combined_prompts(weather_data)
-    else:
-        state.prompts = get_time_of_day_prompts()
+    state.prompts = build_combined_prompts(weather_data, state.bpm)
     
     now = datetime.now()
     print(f"🕒 Local Time: {now.strftime('%H:%M')} ({now.strftime('%A, %B %d')})")
