@@ -283,7 +283,7 @@ def get_spotify_style_prompts(tracks: list[dict]) -> list[tuple[str, float]]:
         logger.info(f"✨ Gemini generated styles: {style_list}")
         # Assign weights, slightly higher for the first few
         weighted = []
-        for i, style in enumerate(style_list[:5]):
+        for i, style in enumerate(style_list[:3]):
              weight = 1.2 if i == 0 else (1.1 if i == 1 else 1.0)
              weighted.append((style, weight))
         return weighted
@@ -297,7 +297,7 @@ def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, 
     # Genre and experience get high-priority slots
     preference_prompts: list[tuple[str, float]] = []
     if genre:
-        preference_prompts.append((f"{genre} style", 1.5))
+        preference_prompts.append((f"{genre} style", 1.8))
     if experience:
         preference_prompts.append((f"{experience} mood", 1.8))
 
