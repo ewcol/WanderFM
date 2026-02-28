@@ -22,6 +22,7 @@ def create_player_thread(audio_queue: queue.Queue) -> threading.Thread:
     def _run() -> None:
         stream: Optional[sd.RawOutputStream] = None
         try:
+            from src.state import MusicState
             stream = sd.RawOutputStream(
                 samplerate=SAMPLE_RATE,
                 channels=CHANNELS,
@@ -35,10 +36,12 @@ def create_player_thread(audio_queue: queue.Queue) -> threading.Thread:
                     break
                 try:
                     stream.write(chunk)
-                except Exception:
+                except Exception as e:
+                    # We can't easily access 'state' here unless we pass it
                     pass
-        except Exception:
-            pass
+        except Exception as e:
+            # How to report? Let's just print to terminal or we need the state handle
+            print(f"\n❌ Audio device error: {e}")
         finally:
             if stream:
                 try:

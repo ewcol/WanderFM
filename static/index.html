@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderFM | Real-time AI Music</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>WanderFM</h1>
+            <p class="subtitle">Real-time music powered by Lyria</p>
+        </header>
+
+        <main>
+            <section class="card glass">
+                <div class="status-badge" id="running-status">
+                    <span class="indicator"></span> <span class="status-text">Disconnected</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="city-input">Location for Weather</label>
+                    <div class="input-with-button">
+                        <input type="text" id="city-input" placeholder="e.g. London, Tokyo" value="New York">
+                        <button id="update-city-btn" class="btn-secondary">Update</button>
+                    </div>
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="label">BPM</span>
+                        <span class="value" id="bpm-value">90</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Chunks</span>
+                        <span class="value" id="chunks-value">0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="bpm-slider">❤️ Heartbeat (Tempo)</label>
+                    <input type="range" id="bpm-slider" min="60" max="180" value="90" step="5">
+                    <div class="slider-labels">
+                        <span>60</span>
+                        <span>180</span>
+                    </div>
+                </div>
+
+                <div class="prompts-box" id="prompts-box">
+                    <p>Fetching active prompts...</p>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="play-btn" class="btn-primary">▶ Play Music</button>
+                    <button id="stop-btn" class="btn-danger hidden">⏹ Stop</button>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Audio plays on the server host machine • Google Lyria RealTime</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
