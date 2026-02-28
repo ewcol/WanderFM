@@ -236,9 +236,20 @@ def get_location_prompts(geocoded=None, nearby=None) -> list[tuple[str, float]]:
     return prompts[:2]
 
 
-def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None) -> list[tuple[str, float]]:
-    """Combine time-of-day, weather, and location prompts for Lyria."""
-    time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:2]
-    weather_prompts = get_weather_prompts(weather)[:2] if weather else []
+def build_combined_prompts(weather: WeatherData, bpm: int = 100, geocoded=None, nearby=None, *, genre: Optional[str] = None, experience: Optional[str] = None) -> list[tuple[str, float]]:
+    """Combine time-of-day, weather, location, genre, and experience prompts for Lyria."""
+    # Genre and experience get high-priority slots
+    preference_prompts: list[tuple[str, float]] = []
+    if genre:
+        preference_prompts.append((f"{genre} style", 1.5))
+    if experience:
+        preference_prompts.append((f"{experience} mood", 1.8))
+
+    # Reduce time/weather slots when preferences are active to stay within 6-prompt cap
+    time_limit = 1 if preference_prompts else 2
+    weather_limit = 1 if preference_prompts else 2
+
+    time_prompts = [(t, w * 1.2) for t, w in get_time_of_day_prompts()][:time_limit]
+    weather_prompts = get_weather_prompts(weather)[:weather_limit] if weather else []
     location_prompts = get_location_prompts(geocoded, nearby)
-    return filter_coherency(time_prompts + weather_prompts + location_prompts, bpm)[:6]
+    return filter_coherency(preference_prompts + time_prompts + weather_prompts + location_prompts, bpm)[:6]

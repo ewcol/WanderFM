@@ -5,6 +5,8 @@ Real-time AI music generation powered by **Google Lyria RealTime**, driven by yo
 ## Features
 
 - **❤️ Heartbeat (BPM)** – Simulate heart rate (60–180 BPM). Maps directly to music tempo.
+- **🎵 Genre** – Pick from presets (Lo-fi, Jazz, Electronic, Rock, Classical, R&B, Ambient, Japanese cryptopunk polka) or type your own for fine-grained control.
+- **✨ Experience** – Choose a vibe (Happy Walk, Intense Study, Chill Evening, Road Trip, Workout) or describe your own to shape the music's energy and character.
 - **🕐 Time of day** – Morning, afternoon, evening, and night shape the mood (e.g. calm morning vs late-night ambient).
 - **🌤️ Weather** – Google Weather API provides current conditions (sunny, rainy, cloudy, stormy, snowy, windy, etc.).
 - **📍 Location** – Nearby places (via Google Places API) influence the music — a jazz club gets jazz, a stadium gets crowd energy, a park gets nature ambient. The place name itself is included in the prompt.
@@ -48,9 +50,10 @@ python app.py
 
 ### 4. Use (Web Interface)
 
-1. Adjust the **BPM slider** to change the tempo in real-time.
-2. Enter coordinates or allow location access to update the mood based on local weather and nearby places.
-3. Click **Play** to start the music generation.
+1. **Genre & Experience** – Select presets or type custom values to steer the music's sound and character (applied with high priority).
+2. Adjust the **BPM slider** to change the tempo in real-time.
+3. Enter coordinates to update the mood based on local weather and nearby places.
+4. Click **Play** to start real-time music generation.
 
 ## Project structure
 

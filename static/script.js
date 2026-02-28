@@ -9,9 +9,15 @@ const stopBtn = document.getElementById('stop-btn');
 const statusBadge = document.getElementById('running-status');
 const statusText = statusBadge.querySelector('.status-text');
 const promptsBox = document.getElementById('prompts-box');
+const genrePills = document.getElementById('genre-pills');
+const genreCustom = document.getElementById('genre-custom');
+const experiencePills = document.getElementById('experience-pills');
+const experienceCustom = document.getElementById('experience-custom');
 
 let isRunning = false;
 let pollInterval = null;
+let selectedGenre = '';
+let selectedExperience = '';
 
 async function updateStatus() {
     try {
@@ -50,6 +56,10 @@ async function updateStatus() {
 }
 
 async function startMusic() {
+    // Ensure genre/experience are applied before starting playback
+    if (selectedGenre || selectedExperience) {
+        await sendPreferences();
+    }
     await fetch('/api/start', { method: 'POST' });
     updateStatus();
     if (!pollInterval) {
@@ -71,6 +81,46 @@ async function updateBpm(bpm) {
     });
 }
 
+let prefDebounce = null;
+function debouncedSendPreferences() {
+    clearTimeout(prefDebounce);
+    prefDebounce = setTimeout(sendPreferences, 400);
+}
+
+function setupPillRow(container, customInput, getSetter, setSetter) {
+    container.addEventListener('click', (e) => {
+        const pill = e.target.closest('.pill');
+        if (!pill) return;
+        const wasActive = pill.classList.contains('active');
+        container.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        if (wasActive) {
+            setSetter('');
+        } else {
+            pill.classList.add('active');
+            setSetter(pill.dataset.value);
+            customInput.value = '';
+        }
+        sendPreferences();
+    });
+    customInput.addEventListener('input', () => {
+        container.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        setSetter(customInput.value);
+        debouncedSendPreferences();
+    });
+}
+
+setupPillRow(genrePills, genreCustom, () => selectedGenre, v => { selectedGenre = v; });
+setupPillRow(experiencePills, experienceCustom, () => selectedExperience, v => { selectedExperience = v; });
+
+async function sendPreferences() {
+    await fetch('/api/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ genre: selectedGenre, experience: selectedExperience })
+    });
+    updateStatus();
+}
+
 async function updateCity() {
     const lat = parseFloat(latInput.value);
     const lon = parseFloat(lonInput.value);
@@ -83,7 +133,7 @@ async function updateCity() {
         const response = await fetch('/api/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lat, lon })
+            body: JSON.stringify({ lat, lon, genre: selectedGenre, experience: selectedExperience })
         });
         if (!response.ok) throw new Error('Could not fetch weather for coordinates');
         updateCityBtn.textContent = 'Update';
